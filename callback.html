@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<script type="text/javascript">
+	window.addEventListener('load', function(){
+		var opener = window.opener, origin = opener.location.origin;
+		opener.postMessage(window.location.hash, origin);
+		window.close();
+	});
+	</script>
+</head>
+<body>
+	<h1>Dropbox sign-in successful</h1>
+	<p>Please close this window.</p>
+</body>
+</html>
