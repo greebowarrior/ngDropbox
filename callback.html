@@ -5,7 +5,8 @@
 	<script type="text/javascript">
 	window.addEventListener('load', function(){
 		var opener = window.opener, origin = opener.location.origin;
-		opener.postMessage(window.location.hash, origin);
+		var message = (window.location.hash) ? window.location.hash : window.location.search
+		opener.postMessage(message, origin);
 		window.close();
 	});
 	</script>
