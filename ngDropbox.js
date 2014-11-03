@@ -1,8 +1,6 @@
 'use strict';
-angular.module('ngDropbox', ['ngResource'])
+angular.module('ngDropbox', [])
 	.provider('$dropbox', function $dropboxProvider(){
-		var clientId, OAuthToken, redirectUri;
-		
 		var settings = this.settings = {
 			app_key: null,
 			app_secret: null,
@@ -142,14 +140,16 @@ angular.module('ngDropbox', ['ngResource'])
 				},
 				
 				token_from_oauth1: function(){
-					var deferred = $q.defer();
-					if (!settings.oauth2 && settings.oauth.token){
+					var deferred = $q.defer(), self = this;
+					if (self.settings.oauth2){
+						deferred.resolve({'access_token':self.settings.oauth2,'token_type':'bearer'});
+					} else {
 						$http.post('https://api.dropbox.com/1/oauth2/token_from_oauth1', null, {
 							'headers': authorizationHeader()
 						})
 						.success(function(response){
 							if (response.access_token){
-								settings.oauth2 = response.access_token;
+								self.settings.oauth2 = response.access_token;
 								return deferred.resolve(response);
 							}
 							return deferred.reject(response);
@@ -193,16 +193,19 @@ angular.module('ngDropbox', ['ngResource'])
 				datastore: {
 					// TODO: datastore methods
 					create: function(id){
-						return $http.post('https://api.dropbox.com/1/datastores/get_or_create_datastore', null, {'params':{'dsid':id}});
+						return $http.post('https://api.dropbox.com/1/datastores/get_or_create_datastore', null, {'params':{'dsid':id}, 'headers': authorizationHeader()});
 					},
-					delete: function(id){
-						return $http.post('https://api.dropbox.com/1/datastores/delete_datastore', null, {'params':{'handle':id}});
+					delete: function(handle){
+						return $http.post('https://api.dropbox.com/1/datastores/delete_datastore', null, {'params':{'handle':handle}, 'headers': authorizationHeader()});
 					},
-					get: function(datastore){
-						return $http.get('https://api.dropbox.com/1/datastores/get_datastore', {'params':{'dsid':id}, 'headers': authorizationHeader()});
+					get: function(id){
+						return $http.get('https://api.dropbox.com/1/datastores/get_datastore', {'params':{'dsid':id},'headers': authorizationHeader()});
 					},
 					list: function(){
 						return $http.get('https://api.dropbox.com/1/datastores/list_datastores', {'headers': authorizationHeader()});
+					},
+					snapshot: function(handle){
+						return $http.get('https://api.dropbox.com/1/datastores/get_snapshot', {'params': {'handle': handle}, 'headers': authorizationHeader()});
 					}
 				},
 				fileops: {
@@ -224,9 +227,11 @@ angular.module('ngDropbox', ['ngResource'])
 					if (typeof(rev) != 'undefined') params.rev = rev;
 					return $http.get('https://api-content.dropbox.com/1/files/auto/'+path, {'params': params, 'headers': authorizationHeader()});
 				},
-				files_put: function(path, data){
-					// Upload file to dropbox
-					return $http.put('https://api-content.dropbox.com/1/files_put/auto/'+path, data, {'headers': authorizationHeader()});
+				files_put: function(path, data, mime){
+					return $http.put('https://api-content.dropbox.com/1/files_put/auto/'+path, data, {
+						'headers': authorizationHeader(),
+						'transformRequest': angular.identity
+					});
 				},
 				media: function(path){
 					return $http.post('https://api.dropbox.com/1/media/auto/'+path, null, {'headers': authorizationHeader()});
@@ -256,7 +261,7 @@ angular.module('ngDropbox', ['ngResource'])
 					return this.fileopts.delete(path);	
 				},
 				isAuthorized: function(){
-					return (this.oauth.access_token) ? true : false;
+					return (this.settings.oauth2 || this.settings.oauth.access_token) ? true : false;
 				},
 				list: function(path){
 					return this.metadata(path);
